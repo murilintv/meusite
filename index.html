@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Solario MC Store</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+  body { font-family:Poppins,sans-serif; margin:0; padding:0; background:#000; color:#FFD700; }
+  header { background:#000; padding:20px; text-align:center; border-bottom:2px solid #FFD700; }
+  header h1 { margin:0; color:#FFD700; font-size:2.8rem; font-weight:600; letter-spacing:2px; text-shadow:0 0 5px #FFD700; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; padding:20px; }
+  .card { background:#111; border-radius:14px; overflow:hidden; box-shadow:0 5px 15px rgba(255,215,0,0.2); transition:transform .3s,box-shadow .3s; position:relative; }
+  .card:hover { transform:translateY(-6px); box-shadow:0 10px 25px rgba(255,215,0,0.5); }
+  .card img { width:100%; height:160px; object-fit:cover; filter:drop-shadow(0 0 3px #FFD700); }
+  .card-content { padding:15px; }
+  .card-title { font-size:1.3rem; margin-bottom:5px; font-weight:600; text-shadow:0 0 5px #FFD700; }
+  .card-price { font-size:1rem; color:#ccc; margin-bottom:12px; font-weight:500; }
+  .actions { display:flex; justify-content:space-between; gap:10px; }
+  .btn { padding:8px 12px; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9rem; }
+  .btn-info { background:#FFD700; color:#000; }
+  .btn-buy { background:#333; color:#FFD700; }
+  .popup { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:1000; }
+  .popup-content { background:#111; padding:20px; border-radius:12px; box-shadow:0 0 15px #FFD700; max-width:400px; text-align:center; position:relative; }
+  .popup-content h2 { margin-top:0; color:#FFD700; }
+  .popup-content label, .popup-content p { color:#ccc; }
+  .popup-content input, .popup-content select { margin:8px 0; padding:8px; width:90%; border-radius:6px; border:none; }
+  .popup-content button { margin-top:15px; padding:10px 20px; border:none; background:#FFD700; color:#000; border-radius:8px; font-weight:600; cursor:pointer; }
+  .close-btn { position:absolute; top:10px; right:15px; background:transparent; border:none; color:#FFD700; font-size:1.2rem; cursor:pointer; }
+</style>
+<script>
+  function abrirPopup(tipo) {
+    const popup = document.getElementById('popup');
+    const content = document.getElementById('popup-content');
+    popup.style.display = 'flex';
+    const qrPix = 'https://i.imgur.com/QRexemplo.png';
+    let bodyHTML = `<button class="close-btn" onclick="fecharPopup()">×</button>`;
+    bodyHTML += `<label>Nome do jogador:</label><br><input type="text" id="nickInput" placeholder="Seu nick">`;
+    bodyHTML += `<p>Chave PIX: <strong>suporte@solariomc.com</strong></p>`;
+    bodyHTML += `<img src="${qrPix}" alt="QR PIX" style="width:180px;margin:10px auto;"><br>`;
+    if(tipo==='cash'){
+      bodyHTML += `<h2>Comprar Cash</h2><p>10 R$ = 100 Cash</p>`;
+      bodyHTML += `<label>Quantidade de Cash:</label><br><input type="number" id="cashCount" min="1" value="100">`;
+    } else if(tipo==='chaves'){
+      bodyHTML += `<h2>Comprar Chaves</h2><label>Tipo:</label><br><select id="produtoSelect"><option>Chave Comum - R$2</option><option>Chave Spawn - R$5</option><option>Chave Especial - R$10</option><option>Chave Pandora - R$20</option></select><br>`;
+      bodyHTML += `<label>Quantidade de Chaves:</label><br><input type="number" id="keyCount" min="1" value="1">`;
+    } else {
+      bodyHTML += `<h2>Pagamento VIP ${tipo}</h2>`;
+    }
+    bodyHTML += `<label>Comprovante:</label><br><input type="file" id="comprovanteInput" accept="image/*"><br>`;
+    bodyHTML += `<button onclick="enviarComprovante('${tipo}')">Enviar Comprovante</button>`;
+    content.innerHTML = bodyHTML;
+  }
+  function fecharPopup(){ document.getElementById('popup').style.display='none'; }
+  function abrirDescricao(btn) {
+    const card = btn.closest('.card');
+    const desc = card.getAttribute('data-desc');
+    alert(desc);
+  }
+  async function enviarComprovante(tipo){
+    const nick=document.getElementById('nickInput').value;
+    const file=document.getElementById('comprovanteInput').files[0];
+    if(!nick||!file){ return alert('Preencha nick e comprovante'); }
+    let produto=tipo;
+    let valor='';
+    if(tipo==='cash'){
+      const cnt=+document.getElementById('cashCount').value;
+      produto=`${cnt} Cash`;
+      valor=(cnt/100*10).toFixed(2);
+    } else if(tipo==='chaves'){
+      const select= document.getElementById('produtoSelect');
+      produto=select.value;
+      const cnt2=document.getElementById('keyCount').value;
+      produto=`${cnt2} ${produto}`;
+      const priceMap={ 'Chave Comum - R$2':2,'Chave Spawn - R$5':5,'Chave Especial - R$10':10,'Chave Pandora - R$20':20 };
+      valor=(priceMap[select.value]*cnt2).toFixed(2);
+    }
+    const fd=new FormData(); fd.append('nick',nick); fd.append('produto',produto); fd.append('valor',valor); fd.append('comprovante',file);
+    try{
+      const res=await fetch('http://ovh-vin-01.elgaehost.com.br:3000/comprovante',{method:'POST',body:fd});
+      if(res.ok){ alert('Enviado com sucesso!'); fecharPopup(); } else alert('Erro no envio');
+    }catch{ alert('Falha de conexão'); }
+  }
+</script>
+</head>
+<body>
+<header><h1>Solario MC Store</h1></header>
+<main class="grid">
+  <div class="card" data-desc="Acesso VIP Cavaleiro de 31 dias com comandos exclusivos."><img src="https://via.placeholder.com/300x160?text=VIP+Cavaleiro"><div class="card-content"><div class="card-title">VIP Cavaleiro</div><div class="card-price">R$10</div><div class="actions"><button class="btn-info" onclick="abrirDescricao(this)">Descrição</button><button class="btn-buy" onclick="abrirPopup('Cavaleiro')">Comprar</button></div></div></div>
+  <div class="card" data-desc="Acesso VIP Guerreiro de 31 dias com perks de combate."><img src="https://via.placeholder.com/300x160?text=VIP+Guerreiro"><div class="card-content"><div class="card-title">VIP Guerreiro</div><div class="card-price">R$20</div><div class="actions"><button class="btn-info" onclick="abrirDescricao(this)">Descrição</button><button class="btn-buy" onclick="abrirPopup('Guerreiro')">Comprar</button></div></div></div>
+  <div class="card" data-desc="Acesso VIP Lord de 31 dias com poderes administrativos."><img src="https://via.placeholder.com/300x160?text=VIP+Lord"><div class="card-content"><div class="card-title">VIP Lord</div><div class="card-price">R$35</div><div class="actions"><button class="btn-info" onclick="abrirDescricao(this)">Descrição</button><button class="btn-buy" onclick="abrirPopup('Lord')">Comprar</button></div></div></div>
+  <div class="card" data-desc="Acesso VIP Barão de 31 dias com status permanente."><img src="https://via.placeholder.com/300x160?text=VIP+Bar%C3%A3o"><div class="card-content"><div class="card-title">VIP Barão</div><div class="card-price">R$50</div><div class="actions"><button class="btn-info" onclick="abrirDescricao(this)">Descrição</button><button class="btn-buy" onclick="abrirPopup('Barão')">Comprar</button></div></div></div>
+  <div class="card" data-desc="Compre Cash para usar na loja interna."><img src="https://via.placeholder.com/300x160?text=Cash"><div class="card-content"><div class="card-title">Comprar Cash</div><div class="card-price">10R$ = 100 Cash</div><div class="actions"><button class="btn-info" onclick="abrirDescricao(this)">Descrição</button><button class="btn-buy" onclick="abrirPopup('cash')">Comprar</button></div></div></div>
+  <div class="card" data-desc="Chaves para baús: Comum, Spawn, Especial, Pandora."><img src="https://via.placeholder.com/300x160?text=Chaves"><div class="card-content"><div class="card-title">Comprar Chaves</div><div class="card-price">A partir de R$2</div><div class="actions"><button class="btn-info" onclick="abrirDescricao(this)">Descrição</button><button class="btn-buy" onclick="abrirPopup('chaves')">Comprar</button></div></div></div>
+</main>
+<div class="popup" id="popup"><div class="popup-content" id="popup-content"></div></div>
+</body>
+</html>
